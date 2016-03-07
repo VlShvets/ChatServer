@@ -1,7 +1,7 @@
 #include "chatserver.h"
 
-ChatServer::ChatServer(int _nPort, QWidget *parent)
-    : QWidget(parent), nextBlockSize(0)
+ChatServer::ChatServer(int _nPort, QWidget *_parent)
+    : QWidget(_parent), nextBlockSize(0)
 {
     tcpServer = new QTcpServer(this);
     if(!tcpServer->listen(QHostAddress::Any, _nPort))
@@ -31,7 +31,7 @@ void ChatServer::slotNewConnection()
     QTcpSocket *clientSocket = tcpServer->nextPendingConnection();
     connect(clientSocket, SIGNAL(disconnected()), clientSocket, SLOT(deleteLater()));
     connect(clientSocket, SIGNAL(readyRead()), this, SLOT(slotReadClient()));
-    sendToClient(clientSocket, "Server Response: Connected!");
+    sentToClient(clientSocket, "Server Response: Connected!");
 }
 
 void ChatServer::slotReadClient()
@@ -43,12 +43,12 @@ void ChatServer::slotReadClient()
     {
         if(!nextBlockSize)
         {
-            if(clientSocket->bytesAvailable() < sizeOf(quint16))
+            if(clientSocket->bytesAvailable() < sizeof(quint16))
                 break;
             in >> nextBlockSize;
         }
 
-        if(clientSocket->bytesAvailable() < nextBlockSizet)
+        if(clientSocket->bytesAvailable() < nextBlockSize)
             break;
 
         QTime time;

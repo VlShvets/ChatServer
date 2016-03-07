@@ -4,17 +4,19 @@
 #include <QApplication>
 #include <QWidget>
 #include <QTcpServer>
+#include <QTcpSocket>
 #include <QTextEdit>
-#include <QLabel>
 #include <QMessageBox>
 #include <QVBoxLayout>
+#include <QLabel>
+#include <QTime>
 
 class ChatServer : public QWidget
 {
     Q_OBJECT
 
 public:
-    ChatServer(int _nPort, QWidget *parent = 0);
+    ChatServer(int _nPort, QWidget *_parent = 0);
     ~ChatServer();
 
 public slots:
