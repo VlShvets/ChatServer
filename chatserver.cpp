@@ -1,12 +1,21 @@
 #include "chatserver.h"
 
-ChatServer::ChatServer(int _nPort, QWidget *_parent)
+ChatServer::ChatServer(QWidget *_parent)
     : QWidget(_parent), nextBlockSize(0)
 {
+    this->setWindowTitle(tr("Сервер"));
+
     tcpServer = new QTcpServer(this);
-    if(!tcpServer->listen(QHostAddress::Any, _nPort))
+
+    bool bOk;
+    quint16 nPort = QInputDialog::getInt(0, tr("Номер порта"), tr("Введите номер порта:"),
+                                        2323, 0, 65535, 1, &bOk);
+    if(!bOk)
+        nPort = 2323;
+
+    if(!tcpServer->listen(QHostAddress::Any, nPort))
     {
-        QMessageBox::critical(0, "Server Eroor", "Unable to start the server:" + tcpServer->errorString());
+        QMessageBox::critical(0, tr("Ошибка Сервера"), tr("Невозможно запустить сервер:") + " " + tcpServer->errorString());
         tcpServer->close();
         return;
     }
@@ -16,9 +25,11 @@ ChatServer::ChatServer(int _nPort, QWidget *_parent)
     txt->setReadOnly(true);
 
     QVBoxLayout *vbxLayout = new QVBoxLayout;
-    vbxLayout->addWidget(new QLabel("<H1>Server</H1>"));
+    vbxLayout->addWidget(new QLabel(tr("<H1>Сервер</H1>")));
     vbxLayout->addWidget(txt);
     setLayout(vbxLayout);
+
+    txt->append(tr("Порт") + " " + QString::number(nPort) + ". " + tr("Сервер запущен..."));
 }
 
 ChatServer::~ChatServer()
@@ -28,15 +39,18 @@ ChatServer::~ChatServer()
 
 void ChatServer::slotNewConnection()
 {
-    QTcpSocket *clientSocket = tcpServer->nextPendingConnection();
-    connect(clientSocket, SIGNAL(disconnected()), clientSocket, SLOT(deleteLater()));
-    connect(clientSocket, SIGNAL(readyRead()), this, SLOT(slotReadClient()));
-    sentToClient(clientSocket, "Server Response: Connected!");
+    clientSockets.push_back(tcpServer->nextPendingConnection());
+
+    connect(clientSockets.last(), SIGNAL(disconnected()), clientSockets.last(), SLOT(deleteLater()));
+    connect(clientSockets.last(), SIGNAL(disconnected()), this, SLOT(deleteSocket()));
+    connect(clientSockets.last(), SIGNAL(readyRead()), this, SLOT(slotReadClient()));
+
+    sentToClient(clientSockets.last(), tr("Ответ с сервера: Соединение установлено!"));
 }
 
 void ChatServer::slotReadClient()
 {
-    QTcpSocket *clientSocket = (QTcpSocket*) sender();
+    QTcpSocket *clientSocket = (QTcpSocket *) sender();
     QDataStream in(clientSocket);
     in.setVersion(QDataStream::Qt_5_5);
     for(;;)
@@ -55,13 +69,35 @@ void ChatServer::slotReadClient()
         QString str;
         in >> time >> str;
 
-        QString strMessage = time.toString() + " " + "Client has sent - " + str;
-        txt->append(strMessage);
+        QString strMessage;
+        if(clientSocket->objectName() == "")
+        {
+            clientSocket->setObjectName(str);
+            strMessage = tr("Пользователь") + " <b>" + str + "</b> " +
+                    tr("был подключен успешно. Всего пользователей в сети") + " " + QString::number(clientSockets.count());
+            txt->append(time.toString() + " " + strMessage);
+        }
+        else
+        {
+            strMessage = "<b>" + clientSocket->objectName() + "</b><br>" + str + "<br>";
+            txt->append(time.toString() + " " + strMessage);
+
+            for(int i = 0; i < clientSockets.count(); ++i)
+                sentToClient(clientSockets.at(i), strMessage);
+        }
 
         nextBlockSize = 0;
-
-        sentToClient(clientSocket, "Sent Response: Received \"" + str + "\"");
     }
+}
+
+void ChatServer::deleteSocket()
+{
+    QTcpSocket *clientSocket = (QTcpSocket *) sender();
+    clientSockets.removeAll(clientSocket);
+
+    QString strMessage = tr("Пользователь") + " <b>" + clientSocket->objectName() + "</b> " +
+            tr("отключился. Всего пользователей в сети") + " " + QString::number(clientSockets.count());
+    txt->append(QTime::currentTime().toString() + " " + strMessage);
 }
 
 void ChatServer::sentToClient(QTcpSocket *_pSocket, const QString &_str)

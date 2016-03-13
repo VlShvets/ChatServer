@@ -4,7 +4,7 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
-    ChatServer server(2323);
+    ChatServer server;
     server.show();
 
     return a.exec();

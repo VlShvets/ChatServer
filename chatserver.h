@@ -10,18 +10,22 @@
 #include <QVBoxLayout>
 #include <QLabel>
 #include <QTime>
+#include <QInputDialog>
 
 class ChatServer : public QWidget
 {
     Q_OBJECT
 
 public:
-    ChatServer(int _nPort, QWidget *_parent = 0);
+    ChatServer(QWidget *_parent = 0);
     ~ChatServer();
 
 public slots:
     virtual void slotNewConnection();
     void slotReadClient();
+
+private slots:
+    void deleteSocket();
 
 private:
     void sentToClient(QTcpSocket *_pSocket, const QString &_str);
@@ -29,6 +33,8 @@ private:
     QTcpServer *tcpServer;
     QTextEdit *txt;
     quint16 nextBlockSize;
+
+    QVector <QTcpSocket *> clientSockets;
 };
 
 #endif // CHATSERVER_H
