@@ -48,6 +48,7 @@ void ChatServer::slotNewConnection()
 
 void ChatServer::slotReadClient()
 {
+    qDebug() << "ERROR";
     QTcpSocket *clientSocket = (QTcpSocket *) sender();
     QDataStream in(clientSocket);
     in.setVersion(QDataStream::Qt_5_4);
@@ -58,6 +59,7 @@ void ChatServer::slotReadClient()
             if(clientSocket->bytesAvailable() < sizeof(quint16))
                 break;
             in >> nextBlockSize;
+            qDebug() << "nextBlockSize = " << nextBlockSize;
         }
 
         if(clientSocket->bytesAvailable() < nextBlockSize)
@@ -69,23 +71,28 @@ void ChatServer::slotReadClient()
         in >> addressee >> time >> str;
 
         QString strMessage;
-        if(clientSocket->objectName() == "")
+        if(clientSocket->objectName().isEmpty() || clientSocket->objectName().isNull())
         {
             clientSocket->setObjectName(addressee);
             strMessage = tr("Пользователь") + " <b>" + addressee + "</b> " +
                     tr("был подключен успешно. Всего пользователей в сети") + " " + QString::number(clientSockets.count());
             txt->append(time.toString() + " " + strMessage + "<br>");
-
             strMessage.clear();
+
+            /// Формирование списка пользователей
             for(int i = 0; i < clientSockets.count(); ++i)
                 strMessage += clientSockets.at(i)->objectName() + "0x00";
+
+            /// Рассылка списка пользователей
             for(int i = 0; i < clientSockets.count(); ++i)
-                sentToClient(clientSockets.at(i)->objectName(), clientSockets.at(i), strMessage);
+                sentToClient(clientSockets.at(i), clientSockets.at(i)->objectName(), strMessage);
         }
         else
         {
             strMessage = "<b>" + clientSocket->objectName() + "</b><br>" + str + "<br>";
             txt->append(time.toString() + " " + strMessage);
+            qDebug() << socketOfClients(addressee)->objectName();
+            sentToClient(socketOfClients(addressee), clientSocket->objectName(), strMessage);
         }
 
         nextBlockSize = 0;
@@ -102,7 +109,17 @@ void ChatServer::deleteSocket()
     txt->append(QTime::currentTime().toString() + " " + strMessage + "<br>");
 }
 
-void ChatServer::sentToClient(const QString &_sender, QTcpSocket *_pSocket, const QString &_message)
+QTcpSocket *ChatServer::socketOfClients(QString _str)
+{
+    for(int i = 0; i < clientSockets.count(); ++i)
+    {
+        if(clientSockets.at(i)->objectName() == _str)
+            return clientSockets.at(i);
+    }
+    return NULL;
+}
+
+void ChatServer::sentToClient(QTcpSocket *_pSocket, const QString &_sender, const QString &_message)
 {
     QByteArray arrBlock;
     QDataStream out(&arrBlock, QIODevice::WriteOnly);
