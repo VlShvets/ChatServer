@@ -11,7 +11,7 @@ ChatServer::ChatServer(QWidget *_parent)
     quint16 nPort = QInputDialog::getInt(0, tr("Номер порта"), tr("Введите номер порта:"),
                                         2323, 0, 65535, 1, &bOk);
     if(!bOk)
-        nPort = 2323;
+        exit(0);
 
     if(!tcpServer->listen(QHostAddress::Any, nPort))
     {
@@ -108,6 +108,15 @@ void ChatServer::deleteSocket()
     clientSockets.removeAll(clientSocket);
     txt->append(QTime::currentTime().toString() + " " + tr("Пользователь") + " <b>" + clientSocket->objectName() + "</b> " +
                 tr("отключился. Всего пользователей в сети") + " " + QString::number(clientSockets.count()) + "<br>");
+
+    /// Формирование списка клиентов
+    QString listClients;
+    for(int i = 0; i < clientSockets.count(); ++i)
+        listClients += clientSockets.at(i)->objectName() + "0x00";
+
+    /// Рассылка списка клиентов
+    for(int i = 0; i < clientSockets.count(); ++i)
+        sendListClientsToClient(clientSockets.at(i), listClients);
 }
 
 void ChatServer::sendListClientsToClient(QTcpSocket *_tcpSocket, const QString &_listClients)
