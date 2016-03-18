@@ -28,8 +28,9 @@ private slots:
     void deleteSocket();
 
 private:
-    QTcpSocket *socketOfClients(QString _str);
-    void sentToClient(QTcpSocket *_pSocket, const QString &_sender, const QString &_message);
+    void sendListClientsToClient(QTcpSocket *_tcpSocket, const QString &_listClients);
+    QTcpSocket *socketOfClients(const QString &_clientName);
+    void sendMessageToClient(const QString &_sender, const QString &_addressee, const QString &_message);
 
     QTcpServer *tcpServer;
     QTextEdit *txt;
